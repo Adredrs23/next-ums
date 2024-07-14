@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { FC, useState } from 'react';
+import { UserPlusIcon } from 'lucide-react';
 
 import {
 	Dialog,
@@ -22,75 +23,81 @@ import {
 } from '@/components/Atoms';
 import { UserPartialType, UserType } from '@/types/interfaces';
 import { UserActionTile } from '../UserActionTile';
-import { UserPlusIcon } from 'lucide-react';
+import { userSchema } from '@/types/zodSchemas';
+import { set, ZodError, ZodFormattedError } from 'zod';
 
 export function AddUserModal() {
 	const [currentStep, setCurrentStep] = useState(1);
+	const [errors, setErrors] =
+		useState<ZodFormattedError<UserPartialType> | null>(null);
 	const [formData, setFormData] = useState<UserType>({
-		name: 'John Doe',
-		email: 'john@example.com',
-		phone: '123-456-7890',
-		address: '123 Main St, Anytown USA',
-		role: 'admin',
-		github: 'johndoe',
-		linkedin: 'https://linkedin.com/in/johndoe',
-		skypeid: 'johndoe',
-		dob: '1990-01-01',
-		doj: '2022-01-01',
+		name: '',
+		email: '',
+		phone: '',
+		address: '',
+		role: '',
+		github: '',
+		linkedin: '',
+		skypeid: '',
+		dob: '',
+		doj: '',
 	});
-
-	const [errors, setErrors] = useState<UserPartialType | null>(null);
 
 	const handleInputChange = (e: { target: { id: string; value: string } }) => {
 		setFormData({ ...formData, [e.target.id]: e.target.value });
 	};
 
+	// const handleNextStep = () => {
+	// 	const validationErrors: UserPartialType = {};
+
+	// 	if (currentStep === 1) {
+	// 		if (!formData.name) {
+	// 			validationErrors.name = 'Name is required';
+	// 		}
+	// 		if (!formData.email) {
+	// 			validationErrors.email = 'Email is required';
+	// 		} else if (!isValidEmail(formData.email)) {
+	// 			validationErrors.email = 'Invalid email address';
+	// 		}
+	// 		if (!formData.phone) {
+	// 			validationErrors.phone = 'Phone is required';
+	// 		}
+	// 		if (!formData.address) {
+	// 			validationErrors.address = 'Address is required';
+	// 		}
+	// 	} else {
+	// 		if (!formData.role) {
+	// 			validationErrors.role = 'Role is required';
+	// 		}
+	// 		if (!formData.github) {
+	// 			validationErrors.github = 'Github is required';
+	// 		}
+	// 		if (!formData.linkedin) {
+	// 			validationErrors.linkedin = 'LinkedIn is required';
+	// 		}
+	// 		if (!formData.skypeid) {
+	// 			validationErrors.skypeid = 'Skype ID is required';
+	// 		}
+	// 		if (!formData.dob) {
+	// 			validationErrors.dob = 'Date of Birth is required';
+	// 		}
+	// 		if (!formData.doj) {
+	// 			validationErrors.doj = 'Date of Joining is required';
+	// 		}
+	// 	}
+
+	// 	if (Object.keys(validationErrors).length > 0) {
+	// 		setErrors(validationErrors);
+	// 		return;
+	// 	}
+
+	// 	setCurrentStep(currentStep + 1);
+	// 	setErrors(null);
+	// };
+
 	const handleNextStep = () => {
-		const validationErrors: UserPartialType = {};
-
-		if (currentStep === 1) {
-			if (!formData.name) {
-				validationErrors.name = 'Name is required';
-			}
-			if (!formData.email) {
-				validationErrors.email = 'Email is required';
-			} else if (!isValidEmail(formData.email)) {
-				validationErrors.email = 'Invalid email address';
-			}
-			if (!formData.phone) {
-				validationErrors.phone = 'Phone is required';
-			}
-			if (!formData.address) {
-				validationErrors.address = 'Address is required';
-			}
-		} else {
-			if (!formData.role) {
-				validationErrors.role = 'Role is required';
-			}
-			if (!formData.github) {
-				validationErrors.github = 'Github is required';
-			}
-			if (!formData.linkedin) {
-				validationErrors.linkedin = 'LinkedIn is required';
-			}
-			if (!formData.skypeid) {
-				validationErrors.skypeid = 'Skype ID is required';
-			}
-			if (!formData.dob) {
-				validationErrors.dob = 'Date of Birth is required';
-			}
-			if (!formData.doj) {
-				validationErrors.doj = 'Date of Joining is required';
-			}
-		}
-
-		if (Object.keys(validationErrors).length > 0) {
-			setErrors(validationErrors);
-			return;
-		}
-
+		if (!validate()) return;
 		setCurrentStep(currentStep + 1);
-		setErrors(null);
 	};
 
 	const handlePrevStep = () => {
@@ -102,9 +109,16 @@ export function AddUserModal() {
 		console.log(formData);
 	};
 
-	const isValidEmail = (email: string) => {
-		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-		return emailRegex.test(email);
+	const validate = () => {
+		const result = userSchema.safeParse(formData);
+
+		if (!result.success) {
+			const errors = result.error.format();
+			console.log(errors);
+			setErrors(errors);
+			return false;
+		}
+		return true;
 	};
 
 	return (
@@ -158,9 +172,7 @@ export function AddUserModal() {
 										onChange={handleInputChange}
 										className={errors?.name ? 'border-red-500' : ''}
 									/>
-									{errors?.name && (
-										<div className="text-red-500 text-sm">{errors?.name}</div>
-									)}
+									{errors?.name && <Errors errors={errors.name._errors} />}
 								</div>
 								<div className="grid grid-cols-1 gap-2">
 									<Label htmlFor="email">Email</Label>
@@ -172,9 +184,7 @@ export function AddUserModal() {
 										onChange={handleInputChange}
 										className={errors?.email ? 'border-red-500' : ''}
 									/>
-									{errors?.email && (
-										<div className="text-red-500 text-sm">{errors?.email}</div>
-									)}
+									{errors?.email && <Errors errors={errors.email._errors} />}
 								</div>
 								<div className="grid grid-cols-1 gap-2">
 									<Label htmlFor="phone">Phone</Label>
@@ -186,9 +196,7 @@ export function AddUserModal() {
 										onChange={handleInputChange}
 										className={errors?.phone ? 'border-red-500' : ''}
 									/>
-									{errors?.phone && (
-										<div className="text-red-500 text-sm">{errors?.phone}</div>
-									)}
+									{errors?.phone && <Errors errors={errors.phone._errors} />}
 								</div>
 								<div className="grid grid-cols-1 gap-2">
 									<Label htmlFor="address">Address</Label>
@@ -200,9 +208,7 @@ export function AddUserModal() {
 										className={errors?.address ? 'border-red-500' : ''}
 									/>
 									{errors?.address && (
-										<div className="text-red-500 text-sm">
-											{errors?.address}
-										</div>
+										<Errors errors={errors.address._errors} />
 									)}
 								</div>
 							</div>
@@ -228,9 +234,7 @@ export function AddUserModal() {
 											<SelectItem value="user">User</SelectItem>
 										</SelectContent>
 									</Select>
-									{errors?.role && (
-										<div className="text-red-500 text-sm">{errors?.role}</div>
-									)}
+									{errors?.role && <Errors errors={errors.role._errors} />}
 								</div>
 								<div className="grid grid-cols-1 gap-2">
 									<Label htmlFor="github">Github</Label>
@@ -241,9 +245,7 @@ export function AddUserModal() {
 										onChange={handleInputChange}
 										className={errors?.github ? 'border-red-500' : ''}
 									/>
-									{errors?.github && (
-										<div className="text-red-500 text-sm">{errors?.github}</div>
-									)}
+									{errors?.github && <Errors errors={errors.github._errors} />}
 								</div>
 								<div className="grid grid-cols-1 gap-2">
 									<Label htmlFor="linkedin">LinkedIn</Label>
@@ -255,9 +257,7 @@ export function AddUserModal() {
 										className={errors?.linkedin ? 'border-red-500' : ''}
 									/>
 									{errors?.linkedin && (
-										<div className="text-red-500 text-sm">
-											{errors?.linkedin}
-										</div>
+										<Errors errors={errors.linkedin._errors} />
 									)}
 								</div>
 								<div className="grid grid-cols-1 gap-2">
@@ -270,9 +270,7 @@ export function AddUserModal() {
 										className={errors?.skypeid ? 'border-red-500' : ''}
 									/>
 									{errors?.skypeid && (
-										<div className="text-red-500 text-sm">
-											{errors?.skypeid}
-										</div>
+										<Errors errors={errors.skypeid._errors} />
 									)}
 								</div>
 								<div className="grid grid-cols-1 gap-2">
@@ -285,9 +283,7 @@ export function AddUserModal() {
 										onChange={handleInputChange}
 										className={errors?.dob ? 'border-red-500' : ''}
 									/>
-									{errors?.dob && (
-										<div className="text-red-500 text-sm">{errors?.dob}</div>
-									)}
+									{errors?.dob && <Errors errors={errors.dob._errors} />}
 								</div>
 								<div className="grid grid-cols-1 gap-2">
 									<Label htmlFor="doj">Date of Joining</Label>
@@ -299,9 +295,7 @@ export function AddUserModal() {
 										onChange={handleInputChange}
 										className={errors?.doj ? 'border-red-500' : ''}
 									/>
-									{errors?.doj && (
-										<div className="text-red-500 text-sm">{errors?.doj}</div>
-									)}
+									{errors?.doj && <Errors errors={errors.doj._errors} />}
 								</div>
 							</div>
 						)}
@@ -327,3 +321,17 @@ export function AddUserModal() {
 		</Dialog>
 	);
 }
+
+type ErrorsType = {
+	errors: Array<string>;
+};
+
+const Errors: FC<ErrorsType> = ({ errors }) => {
+	if (!errors?.length) return null;
+
+	return errors.map((errorMessage, index) => (
+		<div key={errorMessage + index} className="text-red-500 text-sm">
+			{errorMessage}
+		</div>
+	));
+};
