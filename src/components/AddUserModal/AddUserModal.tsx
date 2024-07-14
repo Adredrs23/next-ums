@@ -23,13 +23,18 @@ import {
 } from '@/components/Atoms';
 import { UserPartialType, UserType } from '@/types/interfaces';
 import { UserActionTile } from '../UserActionTile';
-import { userSchema } from '@/types/zodSchemas';
+import {
+	AddUserStep1Schema,
+	AddUserStep2Schema,
+	userSchema,
+} from '@/types/zodSchemas';
 import { set, ZodError, ZodFormattedError } from 'zod';
 
 export function AddUserModal() {
 	const [currentStep, setCurrentStep] = useState(1);
 	const [errors, setErrors] =
 		useState<ZodFormattedError<UserPartialType> | null>(null);
+
 	const [formData, setFormData] = useState<UserType>({
 		name: '',
 		email: '',
@@ -47,77 +52,63 @@ export function AddUserModal() {
 		setFormData({ ...formData, [e.target.id]: e.target.value });
 	};
 
-	// const handleNextStep = () => {
-	// 	const validationErrors: UserPartialType = {};
-
-	// 	if (currentStep === 1) {
-	// 		if (!formData.name) {
-	// 			validationErrors.name = 'Name is required';
-	// 		}
-	// 		if (!formData.email) {
-	// 			validationErrors.email = 'Email is required';
-	// 		} else if (!isValidEmail(formData.email)) {
-	// 			validationErrors.email = 'Invalid email address';
-	// 		}
-	// 		if (!formData.phone) {
-	// 			validationErrors.phone = 'Phone is required';
-	// 		}
-	// 		if (!formData.address) {
-	// 			validationErrors.address = 'Address is required';
-	// 		}
-	// 	} else {
-	// 		if (!formData.role) {
-	// 			validationErrors.role = 'Role is required';
-	// 		}
-	// 		if (!formData.github) {
-	// 			validationErrors.github = 'Github is required';
-	// 		}
-	// 		if (!formData.linkedin) {
-	// 			validationErrors.linkedin = 'LinkedIn is required';
-	// 		}
-	// 		if (!formData.skypeid) {
-	// 			validationErrors.skypeid = 'Skype ID is required';
-	// 		}
-	// 		if (!formData.dob) {
-	// 			validationErrors.dob = 'Date of Birth is required';
-	// 		}
-	// 		if (!formData.doj) {
-	// 			validationErrors.doj = 'Date of Joining is required';
-	// 		}
-	// 	}
-
-	// 	if (Object.keys(validationErrors).length > 0) {
-	// 		setErrors(validationErrors);
-	// 		return;
-	// 	}
-
-	// 	setCurrentStep(currentStep + 1);
-	// 	setErrors(null);
-	// };
-
 	const handleNextStep = () => {
 		if (!validate()) return;
 		setCurrentStep(currentStep + 1);
+		// Reset the form data for step 2
+		setFormData(() => ({
+			...formData,
+			role: '',
+			github: '',
+			linkedin: '',
+			skypeid: '',
+			dob: '',
+			doj: '',
+		}));
+		// Setting the form errors for step 1 to null as there are no errors to show when step 1 is complete and then only we allow the user to move to step 2
+		setErrors(null);
 	};
 
 	const handlePrevStep = () => {
+		// We will simply allow the user to go back to step 1 if they are on step 2, no need to validate
 		setCurrentStep(currentStep - 1);
 	};
 
 	const handleSubmit = (e: any) => {
 		e.preventDefault();
+		// validate the form data for step 2 by calling the validate function
+		if (!validate()) return;
+
 		console.log(formData);
 	};
 
 	const validate = () => {
-		const result = userSchema.safeParse(formData);
+		if (currentStep === 1) {
+			const { name, email, phone, address } = formData;
 
-		if (!result.success) {
-			const errors = result.error.format();
-			console.log(errors);
-			setErrors(errors);
-			return false;
+			const result = AddUserStep1Schema.safeParse({
+				name,
+				email,
+				phone,
+				address,
+			});
+
+			if (!result.success) {
+				const errors = result.error.format();
+				console.log(errors);
+				setErrors(errors);
+				return false;
+			}
+		} else {
+			const result = AddUserStep2Schema.safeParse(formData);
+			if (!result.success) {
+				const errors = result.error.format();
+				console.log(errors);
+				setErrors(errors);
+				return false;
+			}
 		}
+
 		return true;
 	};
 
@@ -329,9 +320,14 @@ type ErrorsType = {
 const Errors: FC<ErrorsType> = ({ errors }) => {
 	if (!errors?.length) return null;
 
-	return errors.map((errorMessage, index) => (
-		<div key={errorMessage + index} className="text-red-500 text-sm">
-			{errorMessage}
+	return (
+		<div className="flex  gap-2">
+			{errors.map((errorMessage, index) => (
+				<span key={errorMessage + index} className="text-red-500 text-sm">
+					<span className={index == 0 ? 'hidden' : 'inline-block'}>|</span>{' '}
+					{errorMessage}
+				</span>
+			))}
 		</div>
-	));
+	);
 };

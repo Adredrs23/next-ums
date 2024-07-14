@@ -44,3 +44,19 @@ export const userSchema = z.object({
 });
 
 export const UserSchemaPartial = userSchema.partial();
+
+export const AddUserStep1Schema = userSchema.pick({
+	name: true,
+	email: true,
+	phone: true,
+	address: true,
+});
+
+export const AddUserStep2Schema = userSchema.pick({
+	role: true,
+	github: true,
+	linkedin: true,
+	skypeid: true,
+	dob: true,
+	doj: true,
+});
